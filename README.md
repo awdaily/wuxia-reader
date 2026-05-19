@@ -7,10 +7,10 @@
 ```
 wuxia-reader/
 ├── api/fetch.py        # Vercel serverless (Python) — ดึงนิยายจาก lnmtl.com
-├── public/index.html   # หน้าเว็บ + เรียก translate API ตรงจาก browser
-├── app.py              # Flask สำหรับเทสต์ local
-├── requirements.txt
-└── vercel.json
+├── index.html          # หน้าเว็บ + เรียก translate API ตรงจาก browser
+├── dev.py              # Flask สำหรับเทสต์ local เท่านั้น
+├── requirements.txt    # deps สำหรับ api/fetch.py
+└── vercel.json         # บังคับ build config
 ```
 
 ## Local dev
@@ -24,18 +24,11 @@ python dev.py
 ## Deploy to Vercel via GitHub
 
 1. สร้าง repo ใหม่บน GitHub
-2. Push โค้ดขึ้น:
-   ```bash
-   git init
-   git add .
-   git commit -m "init wuxia reader"
-   git branch -M main
-   git remote add origin https://github.com/<USERNAME>/wuxia-reader.git
-   git push -u origin main
-   ```
+2. Push โค้ดขึ้น
 3. ไปที่ https://vercel.com/new → Import Git Repository → เลือก repo
-4. กด Deploy (Vercel auto-detect Python — ไม่ต้องตั้งค่าอะไร)
-5. เปิด URL ที่ Vercel ให้
+4. กด Deploy
+
+Vercel auto-deploy ทุกครั้งที่ push ขึ้น `main`
 
 ## วิธีใช้
 
