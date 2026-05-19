@@ -7,12 +7,13 @@ from flask import Flask, request, jsonify, send_from_directory
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "api"))
 from fetch import fetch_chapter  # type: ignore
 
-app = Flask(__name__, static_folder="public", static_url_path="")
+ROOT = os.path.dirname(__file__)
+app = Flask(__name__)
 
 
 @app.route("/")
 def index():
-    return send_from_directory("public", "index.html")
+    return send_from_directory(ROOT, "index.html")
 
 
 @app.route("/api/fetch", methods=["POST"])
