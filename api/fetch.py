@@ -110,7 +110,7 @@ def fetch_chapter(url):
     except Exception as e:
         return {"error": str(e)}, 502
 
-    soup = BeautifulSoup(resp.text, "lxml")
+    soup = BeautifulSoup(resp.text, "html.parser")
     title = extract_title(soup)
     body = extract_body(soup)
 
@@ -135,17 +135,22 @@ def fetch_chapter(url):
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
-        length = int(self.headers.get('Content-Length', 0))
         try:
-            data = json.loads(self.rfile.read(length))
-        except Exception:
-            data = {}
+            length = int(self.headers.get('Content-Length', 0))
+            try:
+                data = json.loads(self.rfile.read(length))
+            except Exception:
+                data = {}
 
-        url = (data or {}).get("url", "").strip()
-        if not url or not url.startswith("http"):
-            result, status = {"error": "URL ไม่ถูกต้อง"}, 400
-        else:
-            result, status = fetch_chapter(url)
+            url = (data or {}).get("url", "").strip()
+            if not url or not url.startswith("http"):
+                result, status = {"error": "URL ไม่ถูกต้อง"}, 400
+            else:
+                result, status = fetch_chapter(url)
+        except Exception as e:
+            import traceback
+            result = {"error": f"Server error: {str(e)}", "trace": traceback.format_exc()[:500]}
+            status = 500
 
         body = json.dumps(result, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
