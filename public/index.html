@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wuxia Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --text: #e0d5c0;
+    --text-dim: #a09070;
+    --gold: #c9a84c;
+    --gold-dim: #8a6f32;
+    --red: #e05555;
+    --green: #55b055;
+    --border: #2a2a4e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ---- Themes ---- */
+  body.theme-dark   { --bg:#0d0d0d; --surface:#141414; --text:#ddd0b8; --text-dim:#888; --border:#222; }
+  body.theme-sepia  { --bg:#f4ecd8; --surface:#ede0c4; --text:#3d2b1f; --text-dim:#8a7060; --gold:#8a5c2e; --gold-dim:#6b4520; --border:#d4c4a0; --red:#c0392b; --green:#27ae60; }
+  body.theme-light  { --bg:#f5f5f0; --surface:#e8e8e0; --text:#1a1a1a; --text-dim:#666; --gold:#8a5c2e; --gold-dim:#6b4520; --border:#ccc; --red:#c0392b; --green:#27ae60; }
+
+  /* ---- Reading bar ---- */
+  .reading-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .reading-bar label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
+  #font-size-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 110px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  #font-size-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+  }
+  #font-size-val { font-size: 0.8rem; color: var(--text-dim); min-width: 28px; }
+  .theme-btns { display: flex; gap: 6px; align-items: center; }
+  .theme-btn {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .theme-btn:hover { transform: scale(1.15); }
+  .theme-btn.active { border-color: var(--gold); }
+  .theme-btn.t-night  { background: #1a1a2e; }
+  .theme-btn.t-dark   { background: #0d0d0d; border: 2px solid #333; }
+  .theme-btn.t-sepia  { background: #f4ecd8; }
+  .theme-btn.t-light  { background: #f5f5f0; border: 2px solid #ccc; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  header .brand {
+    color: var(--gold);
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-right: 8px;
+    white-space: nowrap;
+  }
+
+  .setting-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  input[type="text"], input[type="password"], select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, input[type="password"]:focus, select:focus {
+    border-color: var(--gold-dim);
+  }
+
+  #api-key { width: 220px; }
+  #model-select { width: 170px; }
+  #custom-model { width: 180px; display: none; }
+
+  .url-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  #chapter-url { flex: 1; }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { opacity: 0.85; }
+  button:active:not(:disabled) { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-gold { background: var(--gold); color: #1a1a2e; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+  }
+
+  main {
+    flex: 1;
+    max-width: 860px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+
+  #welcome {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+  #welcome h2 { color: var(--gold); font-size: 1.8rem; margin-bottom: 12px; }
+  #welcome p { font-size: 1rem; line-height: 1.7; }
+
+  #chapter-area { display: none; }
+
+  #chapter-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--gold);
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  #source-notice {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  #progress-wrap {
+    margin-bottom: 16px;
+    display: none;
+  }
+  #progress-label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  #progress-bar-bg {
+    background: var(--border);
+    border-radius: 99px;
+    height: 6px;
+    overflow: hidden;
+  }
+  #progress-bar {
+    background: var(--gold);
+    height: 100%;
+    width: 0%;
+    border-radius: 99px;
+    transition: width 0.3s ease;
+  }
+  #progress-bar.streaming {
+    width: 100% !important;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-dim));
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  #content-area {
+    font-size: var(--reader-font-size, 18px);
+    line-height: 2;
+    color: var(--text);
+    word-break: break-word;
+  }
+  #content-area p { margin-bottom: 1em; text-indent: 2em; }
+
+  nav.chapter-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  nav.chapter-nav button {
+    min-width: 130px;
+    padding: 10px 20px;
+    font-size: 1rem;
+  }
+
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--red);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    max-width: 420px;
+    text-align: center;
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 999;
+    pointer-events: none;
+  }
+  #toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  #toast.success { background: var(--green); }
+
+  #chapter-area { display: none; }
+
+  .error-block {
+    color: var(--red);
+    background: rgba(224,85,85,0.1);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    word-break: break-all;
+  }
+
+  footer {
+    text-align: center;
+    padding: 12px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">⚔ Wuxia Reader</span>
+  <div class="setting-row">
+    <input type="password" id="api-key" placeholder="API Key (ai.maoy.cn)" autocomplete="off">
+    <select id="model-select">
+      <option value="gpt-5.4" selected>gpt-5.4</option>
+      <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+      <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+      <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+      <option value="custom">กำหนดเอง...</option>
+    </select>
+    <input type="text" id="custom-model" placeholder="ชื่อโมเดล">
+    <button class="btn-outline" onclick="saveSettings()">บันทึก</button>
+  </div>
+</header>
+
+<div class="reading-bar">
+  <label>ขนาดตัวอักษร</label>
+  <input type="range" id="font-size-slider" min="14" max="30" value="18" oninput="applyFontSize(this.value)">
+  <span id="font-size-val">18px</span>
+  <label style="margin-left:8px">พื้นหลัง</label>
+  <div class="theme-btns">
+    <button class="theme-btn t-night active" title="กลางคืน" onclick="applyTheme('night',this)"></button>
+    <button class="theme-btn t-dark"  title="มืด"      onclick="applyTheme('dark',this)"></button>
+    <button class="theme-btn t-sepia" title="Sepia"    onclick="applyTheme('sepia',this)"></button>
+    <button class="theme-btn t-light" title="สว่าง"    onclick="applyTheme('light',this)"></button>
+  </div>
+</div>
+
+<div class="url-row">
+  <input type="text" id="chapter-url" value="https://lnmtl.com/chapter/absolute-resonance-chapter-1375" onkeydown="if(event.key==='Enter') loadChapter()">
+  <button class="btn-gold" id="load-btn" onclick="loadChapter()">โหลด</button>
+</div>
+
+<main>
+  <div id="welcome">
+    <h2>ยุทธจักรนิยายกำลังภายใน</h2>
+    <p>วาง URL ตอนจาก lnmtl.com ด้านบน<br>แล้วกด <strong>โหลด</strong> เพื่อแปลเป็นภาษาไทยสไตล์กำลังภายใน</p>
+  </div>
+
+  <div id="chapter-area">
+    <div id="chapter-title"></div>
+    <div id="source-notice">แปลจากภาษาอังกฤษ (ไม่พบต้นฉบับภาษาจีน)</div>
+
+    <div id="progress-wrap">
+      <div id="progress-label">กำลังแปล...</div>
+      <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+    </div>
+
+    <div id="content-area"></div>
+
+    <nav class="chapter-nav">
+      <button class="btn-outline" id="prev-btn" onclick="goChapter('prev')" disabled>← ตอนก่อน</button>
+      <button class="btn-outline" id="next-btn" onclick="goChapter('next')" disabled>ตอนถัดไป →</button>
+    </nav>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<footer>Wuxia Reader — แปลโดย AI สไตล์กำลังภายใน</footer>
+
+<script>
+const state = {
+  currentUrl: null,
+  nextUrl: null,
+  prevUrl: null,
+  isLoading: false,
+};
+
+// --- Settings ---
+function saveSettings() {
+  const key = document.getElementById('api-key').value.trim();
+  const model = getModel();
+  if (key) localStorage.setItem('wuxia_api_key', key);
+  if (model) localStorage.setItem('wuxia_model', model);
+  showToast('บันทึกแล้ว', 'success');
+}
+
+function loadSettings() {
+  const key   = localStorage.getItem('wuxia_api_key');
+  const model = localStorage.getItem('wuxia_model');
+  const fs    = localStorage.getItem('wuxia_fontsize') || '18';
+  const theme = localStorage.getItem('wuxia_theme')    || 'night';
+
+  if (key) document.getElementById('api-key').value = key;
+  if (model) {
+    const sel = document.getElementById('model-select');
+    const opt = [...sel.options].find(o => o.value === model);
+    if (opt) { sel.value = model; }
+    else {
+      sel.value = 'custom';
+      document.getElementById('custom-model').value = model;
+      document.getElementById('custom-model').style.display = '';
+    }
+  }
+  applyFontSize(fs, false);
+  applyTheme(theme, null, false);
+
+  const lastUrl = localStorage.getItem('wuxia_last_url');
+  if (lastUrl) document.getElementById('chapter-url').value = lastUrl;
+}
+
+// --- Reading preferences ---
+function applyFontSize(val, save = true) {
+  document.documentElement.style.setProperty('--reader-font-size', val + 'px');
+  document.getElementById('font-size-slider').value = val;
+  document.getElementById('font-size-val').textContent = val + 'px';
+  if (save) localStorage.setItem('wuxia_fontsize', val);
+}
+
+function applyTheme(name, btn, save = true) {
+  document.body.classList.remove('theme-dark', 'theme-sepia', 'theme-light');
+  if (name !== 'night') document.body.classList.add('theme-' + name);
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  const active = btn || document.querySelector(`.t-${name}`);
+  if (active) active.classList.add('active');
+  if (save) localStorage.setItem('wuxia_theme', name);
+}
+
+function getModel() {
+  const sel = document.getElementById('model-select');
+  if (sel.value === 'custom') {
+    return document.getElementById('custom-model').value.trim();
+  }
+  return sel.value;
+}
+
+document.getElementById('model-select').addEventListener('change', function() {
+  const custom = document.getElementById('custom-model');
+  custom.style.display = this.value === 'custom' ? '' : 'none';
+});
+
+// --- Streaming translate: เรียก ai.maoy.cn ตรงจาก browser ---
+let currentAbort = null;
+
+const SYSTEM_PROMPT = `คุณคือเครื่องแปลนิยายกำลังภายในจีนเป็นภาษาไทย ห้ามพูดถึงตัวเอง ห้ามเสนอความช่วยเหลือ ห้ามมีคำนำหรือคำลงท้าย ส่งเฉพาะข้อความแปลภาษาไทยเท่านั้น
+คำศัพท์: ลมปราณ เส้นลมปราณ กระบวนท่า พลังจิต ยุทธจักร สำนัก ดวงจิต อาณาจักร
+ชื่อตัวละคร: ทับศัพท์จีนกลาง (Li Luo→หลี่ลั่ว) | ชื่อท่า: แปลความหมาย (Dragon Fist→หมัดมังกร)
+ฉากต่อสู้: ประโยคสั้น ดุดัน | ฉากบรรยาย: สละสลวย | บทสนทนา: มีศักดิ์ศรีตามฐานะตัวละคร`;
+
+async function streamTranslate(text, apiKey, model) {
+  if (currentAbort) currentAbort.abort();
+  currentAbort = new AbortController();
+
+  const area = document.getElementById('content-area');
+  let currentP = null, lineText = '', pendingNL = false;
+
+  function appendChar(ch) {
+    if (ch === '\n') {
+      if (pendingNL) {
+        if (lineText.trim()) { currentP = null; lineText = ''; }
+        pendingNL = false;
+      } else { pendingNL = true; }
+      return;
+    }
+    if (pendingNL) {
+      if (currentP && lineText) { lineText += ' '; currentP.textContent = lineText; }
+      pendingNL = false;
+    }
+    if (!currentP) {
+      currentP = document.createElement('p');
+      area.appendChild(currentP);
+      lineText = '';
+    }
+    lineText += ch;
+    currentP.textContent = lineText;
+  }
+
+  try {
+    const resp = await fetch('https://ai.maoy.cn/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: 'แปลเป็นภาษาไทยทันที ไม่ต้องมีคำนำ:\n\n' + text },
+        ],
+        temperature: 0.7,
+        stream: true,
+      }),
+      signal: currentAbort.signal,
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      showError(`API ${resp.status}: ${errText.slice(0, 200)}`);
+      return false;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') continue;
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch { continue; }
+        if (parsed.error) { showError(parsed.error.message || JSON.stringify(parsed.error)); return false; }
+        const content = parsed.choices?.[0]?.delta?.content;
+        if (content) for (const ch of content) appendChar(ch);
+      }
+    }
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') showError('Stream error: ' + e.message);
+    return false;
+  }
+}
+
+// --- Load Chapter ---
+async function loadChapter(url) {
+  if (state.isLoading) return;
+  url = url || document.getElementById('chapter-url').value.trim();
+  if (!url) { showToast('กรุณาใส่ URL ก่อน'); return; }
+
+  const apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey) { showToast('กรุณาใส่ API Key ก่อน'); return; }
+
+  setLoading(true);
+  clearContent();
+
+  // Show chapter area + progress immediately
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('chapter-area').style.display = 'block';
+  document.getElementById('chapter-title').textContent = 'กำลังโหลด...';
+  showProgress(true);
+  updateProgressLabel('กำลังดึงข้อมูลจาก lnmtl.com...');
+  document.getElementById('progress-bar').style.width = '5%';
+
+  let fetchData;
+  try {
+    const res = await fetch('/api/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    fetchData = await res.json();
+  } catch (e) {
+    showError('เชื่อมต่อ server ไม่ได้: ' + e.message);
+    setLoading(false);
+    showProgress(false);
+    return;
+  }
+
+  if (fetchData.error) {
+    showError(fetchData.error);
+    setLoading(false);
+    showProgress(false);
+    return;
+  }
+
+  state.currentUrl = url;
+  state.nextUrl = fetchData.next_url;
+  state.prevUrl = fetchData.prev_url;
+
+  localStorage.setItem('wuxia_last_url', url);
+  document.getElementById('chapter-url').value = url;
+  document.getElementById('chapter-title').textContent = fetchData.title;
+
+  const sourceNotice = document.getElementById('source-notice');
+  sourceNotice.style.display = fetchData.source_lang === 'en' ? '' : 'none';
+
+  if (!fetchData.content.trim()) {
+    showError('ไม่พบเนื้อหาในตอนนี้');
+    setLoading(false);
+    showProgress(false);
+    return;
+  }
+
+  // Streaming — API call เดียว ข้อความไหลออกมาเรื่อยๆ
+  document.getElementById('progress-bar').classList.add('streaming');
+  updateProgressLabel('กำลังแปล...');
+
+  await streamTranslate(fetchData.content, apiKey, getModel());
+
+  document.getElementById('progress-bar').classList.remove('streaming');
+  setTimeout(() => showProgress(false), 500);
+  updateNavButtons();
+  setLoading(false);
+}
+
+
+function goChapter(dir) {
+  const url = dir === 'next' ? state.nextUrl : state.prevUrl;
+  if (url) loadChapter(url);
+}
+
+// --- UI Helpers ---
+function setLoading(val) {
+  state.isLoading = val;
+  document.getElementById('load-btn').disabled = val;
+  document.getElementById('prev-btn').disabled = val || !state.prevUrl;
+  document.getElementById('next-btn').disabled = val || !state.nextUrl;
+}
+
+function clearContent() {
+  document.getElementById('content-area').innerHTML = '';
+  document.getElementById('chapter-title').textContent = '';
+}
+
+
+function showProgress(show) {
+  document.getElementById('progress-wrap').style.display = show ? 'block' : 'none';
+}
+
+function updateProgress(done, total) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  updateProgressLabel(
+    done < total
+      ? `กำลังแปล ตอนที่ ${done + 1}/${total}... (${pct}%)`
+      : 'แปลเสร็จแล้ว!'
+  );
+}
+
+function updateProgressLabel(text) {
+  document.getElementById('progress-label').textContent = text;
+}
+
+function updateNavButtons() {
+  document.getElementById('prev-btn').disabled = !state.prevUrl;
+  document.getElementById('next-btn').disabled = !state.nextUrl;
+}
+
+function showError(msg) {
+  const area = document.getElementById('content-area');
+  const div = document.createElement('div');
+  div.className = 'error-block';
+  div.textContent = '⚠ ' + msg;
+  area.appendChild(div);
+  showToast(msg);
+}
+
+let toastTimer;
+function showToast(msg, type = 'error') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type === 'success' ? ' success' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Init
+loadSettings();
+</script>
+</body>
+</html>
