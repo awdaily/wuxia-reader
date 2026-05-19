@@ -17,7 +17,7 @@ wuxia-reader/
 
 ```bash
 pip install -r requirements.txt flask
-python app.py
+python dev.py
 # เปิด http://localhost:5000
 ```
 
